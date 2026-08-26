@@ -112,3 +112,26 @@ npm run build
 ## Notes
 
 - **No Database**: The current implementation runs entirely in-memory and does not use a persistent database. Connected clients and patient data are managed dynamically during active WebSocket sessions.
+
+## Development Planning Documentation
+
+### 1. Project Structure
+The project separates the frontend (Next.js/React) and the backend (Node.js/ws) cleanly to ensure modularity.
+- `app/`: Next.js App Router handling the individual routes (`/patient` and `/staff`).
+- `components/`: Contains modular React UI components broken down by domain (`patient/` and `staff/`).
+- `server/`: Houses the standalone Node.js WebSocket server script (`websocket.js`) to handle connections independently from the React lifecycle.
+
+### 2. Design Decisions (UI/UX)
+- **Responsive Layout**: Tailwind CSS grid layouts (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3`) were used so the patient form is easy to use on mobile (stacking vertically) while expanding comfortably on desktop.
+- **Visual Hierarchy**: Features like distinct background colors, categorized sections (e.g., "Personal Information", "Contact Details"), and color-coded status badges (Active/Inactive/Submitted) were implemented for quick visual scanning by staff.
+- **Status Indicators**: Real-time status badges were designed as pill-shaped indicators to mimic live monitoring screens, giving staff immediate confidence in the system's real-time capabilities.
+
+### 3. Component Architecture
+- `PatientForm.jsx`: The core interactive component for patients. It manages its own form state and validation, and securely communicates with the WebSocket server using a debounced data pipeline.
+- `FormField.jsx`: A reusable, accessible input wrapper that automatically handles labels, input types, and localized error messages, ensuring consistency across the form.
+- `StaffDashboard.jsx`: A reactive dashboard that maintains a live connection to the server. It listens for status changes and dynamically displays the patient's data as it arrives without requiring page reloads.
+
+### 4. Real-Time Synchronization Flow
+- **Debounced Updates**: To prevent network flooding, patient input is debounced by 500ms. Keystrokes instantly trigger an 'Active' status ping, but the heavy form payload is only sent once the user pauses typing.
+- **Server Broadcasting**: The Node.js server maintains a lightweight `Set` of active clients and tracks their roles (`staff` or `patient`). When the server receives an update from a patient, it routes the payload strictly to connected `staff` clients.
+- **Lifecycle Management**: The server actively monitors connection health and uses an inactivity timer to automatically transition idle patients back to an "Inactive" status if no updates are received after a short delay.
