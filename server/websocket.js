@@ -1,9 +1,10 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const WebSocket = require("ws");
 
-const wss = new WebSocket.Server({ port: 8080 });
+const port = process.env.PORT || 8080;
+const wss = new WebSocket.Server({ port });
 
-console.log("WebSocket server running on port 8080");
+console.log(`WebSocket server running on port ${port}`);
 
 const clients = new Set();
 
