@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Agnos - Real-Time Patient Registration
+
+Agnos is a small real-time patient registration and monitoring application. 
+
+The application has two main views:
+- **Patient View**: Used to enter patient registration information.
+- **Staff Dashboard**: Allows staff to see patient information and monitor the patient's activity in real time.
+
+The primary purpose of this project is to demonstrate real-time communication between the patient and staff views using WebSockets.
+
+## Features
+
+- Patient registration form
+- Client-side form validation (required fields, email, phone, date of birth)
+- Real-time patient data synchronization
+- Real-time typing and activity status
+- Active / Inactive patient tracking
+- Successful submission states
+- Graceful WebSocket connection and error handling
+- Clean, responsive UI using Tailwind CSS
+
+## Tech Stack
+
+- Next.js
+- React
+- JavaScript
+- Tailwind CSS
+- Node.js
+- WebSocket (`ws` package)
+
+## Application Structure
+
+```text
+Patient Browser
+      |
+      | WebSocket
+      v
+Node.js WebSocket Server
+      |
+      | Broadcast
+      v
+Staff Browser
+```
+
+## Real-Time Patient Status
+
+The Staff Dashboard tracks the patient's activity and connection lifecycle through the following statuses:
+
+- Patient connects -> Inactive
+- Patient starts typing -> Active
+- Patient stops typing for the inactivity timeout -> Inactive
+- Patient submits -> Submitted
+- Patient disconnects -> Disconnected / Inactive
+
+## WebSocket Events
+
+The application uses the following WebSocket event types for communication:
+
+- `patient:join` - Sent when the Patient View connects.
+- `staff:join` - Sent when the Staff Dashboard connects.
+- `patient:typing` - Sent by the patient containing debounced form data.
+- `patient:submitted` - Sent when the patient successfully submits the form.
+- `patient:status` - Broadcasted by the server to update the staff's status badge.
+- `error` - Safely emitted if invalid data is processed.
+
+## Project Structure
+
+```text
+app/
+├── page.jsx
+├── patient/
+│   └── page.jsx
+└── staff/
+    └── page.jsx
+components/
+├── patient/
+│   ├── PatientForm.jsx
+│   └── FormField.jsx
+└── staff/
+    └── StaffDashboard.jsx
+server/
+└── websocket.js
+```
 
 ## Getting Started
 
-First, run the development server:
+To run the application locally, you will need two terminal windows.
 
+1. Start the Next.js development server:
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Start the Node.js WebSocket server:
+```bash
+npm run ws
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Once both servers are running, you can access the views at:
+- **Patient View**: http://localhost:3000/patient
+- **Staff View**: http://localhost:3000/staff
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Validation
 
-## Learn More
+To verify the integrity of the project, run the following commands:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm run lint
+npm run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **No Database**: The current implementation runs entirely in-memory and does not use a persistent database. Connected clients and patient data are managed dynamically during active WebSocket sessions.
