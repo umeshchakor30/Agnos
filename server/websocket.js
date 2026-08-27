@@ -1,10 +1,17 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
+const http = require("http");
 const WebSocket = require("ws");
 
 const port = process.env.PORT || 8080;
-const wss = new WebSocket.Server({ port });
 
-console.log(`WebSocket server running on port ${port}`);
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Agnos WebSocket Server is running\n');
+});
+
+const wss = new WebSocket.Server({ server });
+
+console.log(`WebSocket and HTTP server running on port ${port}`);
 
 const clients = new Set();
 
@@ -116,4 +123,7 @@ wss.on("connection", (socket) => {
       }
     });
   }
+});
+server.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
 });
