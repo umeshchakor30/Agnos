@@ -96,9 +96,15 @@ npm run dev
 npm run ws
 ```
 
-Once both servers are running, you can access the views at:
+Once both servers are running, you can access the local views at:
 - **Patient View**: http://localhost:3000/patient
 - **Staff View**: http://localhost:3000/staff
+
+## Live Production URLs
+
+The application is deployed live and can be accessed from anywhere:
+- **Patient View (Live)**: https://agnos-kappa.vercel.app/patient
+- **Staff View (Live)**: https://agnos-kappa.vercel.app/staff
 
 ## Validation
 
