@@ -9,41 +9,50 @@ export default function StaffDashboard() {
 
   useEffect(() => {
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
-    const socket = new WebSocket(wsUrl);
-    socketRef.current = socket;
+    let socket = null;
+    let reconnectTimeout = null;
 
-    socket.onopen = () => {
-      setStatus("Waiting for patient...");
-      socket.send(JSON.stringify({ type: "staff:join" }));
-    };
+    const connect = () => {
+      socket = new WebSocket(wsUrl);
+      socketRef.current = socket;
 
-    socket.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        if (message.type === "patient:typing" || message.type === "patient:submitted") {
-          setPatient(message.data);
-        } else if (message.type === "patient:status") {
-          setStatus(message.status);
-        } else if (message.type === "error") {
-          console.error("Server error:", message.message);
+      socket.onopen = () => {
+        setStatus("Waiting for patient...");
+        socket.send(JSON.stringify({ type: "staff:join" }));
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          if (message.type === "patient:typing" || message.type === "patient:submitted") {
+            setPatient(message.data);
+          } else if (message.type === "patient:status") {
+            setStatus(message.status);
+          } else if (message.type === "error") {
+            console.error("Server error:", message.message);
+          }
+        } catch (error) {
+          console.error("Failed to parse message", error);
         }
-      } catch (error) {
-        console.error("Failed to parse message", error);
-      }
+      };
+
+      socket.onclose = () => {
+        setStatus("Disconnected / Reconnecting...");
+        reconnectTimeout = setTimeout(connect, 3000);
+      };
+      
+      socket.onerror = () => {
+        setStatus("Connection Error");
+        console.warn("WebSocket connection error (Server might be offline)");
+      };
     };
 
-    socket.onclose = () => {
-      setStatus("Disconnected / Inactive");
-    };
-    
-    socket.onerror = () => {
-      setStatus("Connection Error");
-      // Using console.warn instead of console.error to prevent Next.js error overlay
-      console.warn("WebSocket connection error (Server might be offline)");
-    };
+    connect();
 
     return () => {
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
       if (socketRef.current) {
+        socketRef.current.onclose = null;
         socketRef.current.close();
       }
     };

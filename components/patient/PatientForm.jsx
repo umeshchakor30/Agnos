@@ -129,6 +129,183 @@ export default function PatientForm() {
   };
 
 
+  useEffect(() => {
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
+    let socket = null;
+    let reconnectTimeout = null;
+
+    const connect = () => {
+      socket = new WebSocket(wsUrl);
+      socketRef.current = socket;
+
+      socket.onopen = () => {
+        console.log("WebSocket connected");
+        socket.send(JSON.stringify({ type: "patient:join" }));
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "error") {
+            console.error("Server error:", data.message);
+          } else {
+            console.log("Message from server", data);
+          }
+        } catch (e) {
+          console.error("Failed to parse server message", e);
+        }
+      };
+
+      socket.onclose = () => {
+        console.log("WebSocket closed. Reconnecting...");
+        reconnectTimeout = setTimeout(connect, 3000);
+      };
+      
+      socket.onerror = () => {
+        console.warn("WebSocket connection error");
+      };
+    };
+
+    connect();
+
+    return () => {
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (socketRef.current) {
+        socketRef.current.onclose = null;
+        socketRef.current.close();
+      }
+    };
+  }, []);ient";
+
+import { useEffect, useRef, useState } from "react";
+import FormField from "./FormField";
+
+const initialFormData = {
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  dob: "",
+  gender: "",
+  phone: "",
+  email: "",
+  address: "",
+  language: "",
+  nationality: "",
+  emergencyContactName: "",
+  emergencyContactRelation: "",
+  religion: "",
+};
+
+export default function PatientForm() {
+  const [formData, setFormData] = useState(initialFormData);
+  const [errors, setErrors] = useState({});
+  const [isSuccess, setIsSuccess] = useState(false);
+  const socketRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
+  const typingStatusRef = useRef(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    setFormData((prev) => {
+      const newData = { ...prev, [name]: value };
+      
+      if (!typingStatusRef.current) {
+        typingStatusRef.current = true;
+        if (socketRef.current?.readyState === 1) {
+          socketRef.current.send(JSON.stringify({ type: "patient:typing", data: newData }));
+        }
+      }
+      
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      typingTimeoutRef.current = setTimeout(() => {
+        typingStatusRef.current = false;
+        if (socketRef.current?.readyState === 1) {
+          socketRef.current.send(JSON.stringify({
+            type: "patient:typing",
+            data: newData
+          }));
+        } else {
+          console.error("WebSocket is not connected");
+        }
+      }, 500);
+
+      return newData;
+    });
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Required fields check
+    const requiredFields = [
+      "firstName", "lastName", "dob", "gender", 
+      "phone", "email", "address", "language", "nationality"
+    ];
+
+    requiredFields.forEach((field) => {
+      if (!formData[field] || formData[field].trim() === "") {
+        newErrors[field] = "This field is required";
+      }
+    });
+
+    // Basic email validation
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
+    }
+
+    // Basic phone validation (at least 7 digits, allows some symbols)
+    if (formData.phone && !/^[\d\s\-\+\(\)]{7,}$/.test(formData.phone)) {
+      newErrors.phone = "Please enter a valid phone number";
+    }
+
+    // Date validation
+    if (formData.dob) {
+      const date = new Date(formData.dob);
+      if (isNaN(date.getTime())) {
+        newErrors.dob = "Please enter a valid date";
+      } else if (date > new Date()) {
+        newErrors.dob = "Date of birth cannot be in the future";
+      }
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsSuccess(false);
+
+    if (validateForm()) {
+      // Validation succeeded - showing success state instead of API call
+
+      if(socketRef.current?.readyState === 1){
+        socketRef.current.send(
+          JSON.stringify({
+            type: "patient:submitted",
+            data: formData,
+          })
+        );
+      } else {
+        console.error("WebSocket is not connected");
+      }
+      
+
+      setIsSuccess(true);
+      // In a real app we'd submit to API/WebSocket here
+    }
+  };
+
+
   useEffect(()=>{
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8080";
     const socket = new WebSocket(wsUrl);
